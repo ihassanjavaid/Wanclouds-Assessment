@@ -2,11 +2,13 @@ package main
 
 // import the necessary files
 import (
+	"context"
 	"database/sql"
 	"encoding/csv"
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -35,7 +37,7 @@ func readCSVandPushToSQL() {
 	fmt.Println("CSV file opened successfully!")
 
 	// open the DB connection
-	db, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/wanclouds")
+	db, err := sql.Open("mysql", "root:1234@tcp(127.0.0.1:3306)/wanclouds")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -54,6 +56,18 @@ func readCSVandPushToSQL() {
 		fmt.Println(err)
 	}
 
+	// create table in the database if it doesn't exist already
+	query := "CREATE TABLE `wanclouds`.`person` (`first_name` VARCHAR(45) NULL,`last_name` VARCHAR(45) NULL,`age` INT NULL,`blood_group` VARCHAR(45) NULL)"
+
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+
+	_, error := db.ExecContext(ctx, query)
+	if error != nil {
+		fmt.Println(error)
+	}
+
+	var index int = 0
 	// a for loop that reads CSV file line by line
 	// stores it in a Person-type object, prints and then inserts into db
 	for _, line := range csvLines {
@@ -67,7 +81,8 @@ func readCSVandPushToSQL() {
 			blood_group: line[3],
 		}
 		// Print the line
-		fmt.Println(pers.first_name + " " + pers.last_name + ", " + strconv.Itoa(int(pers.age)) + ", " + pers.blood_group)
+		//fmt.Println(pers.first_name + " " + pers.last_name + ", " + strconv.Itoa(int(pers.age)) + ", " + pers.blood_group)
+		index = index + 1
 		// Insert into MySql
 		insert, err := db.Prepare("INSERT INTO person VALUES (?,?,?,?)")
 		if err != nil {
@@ -76,5 +91,6 @@ func readCSVandPushToSQL() {
 		insert.Exec(pers.first_name, pers.last_name, pers.age, pers.blood_group)
 
 	}
+	fmt.Println(strconv.Itoa(index) + " rows affected!")
 
 }
